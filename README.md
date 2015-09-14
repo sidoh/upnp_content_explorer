@@ -81,8 +81,8 @@ movie.title
 # Get movie metadata
 movie_metadata = service.Browse(
     ObjectID: movie.id, 
-    BrowseFlag: 
-    'BrowseMetadata', Filter: '*'
+    BrowseFlag: 'BrowseMetadata', 
+    Filter: '*'
 )[:Result]
 # => ... (Raw DIDL Lite metadata) ...
 ```

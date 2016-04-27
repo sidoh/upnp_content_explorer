@@ -34,7 +34,7 @@ You can then do the following:
 ### Get the contents of a directory
 
 ```ruby
-node = explorer.node_at('/Movies')
+node = explorer.get('/Movies')
 
 node.children.map(&:title)
 # => ["Comedy", "Horror", "Suspense"]
@@ -45,7 +45,7 @@ node.items.map(&:title)
 
 ### List the children of a directory
 ```ruby
-children = explorer.children_of('/Movies')
+children = explorer.get('/Movies').children
 
 children.map(&:title)
 # => ["Comedy", "Horror", "Suspense"]
@@ -53,7 +53,7 @@ children.map(&:title)
 
 ### List the files inside of a directory
 ```ruby
-items = explorer.items_of('/Movies')
+items = explorer.get('/Movies').items
 
 items.map(&:title)
 # => ["Inside Out (2015).mkv"]
@@ -63,8 +63,19 @@ items.map(&:title)
 ```ruby
 movies = explorer.scrape('/Movies')
 
-items.map(&:title)
+movies.map(&:title)
 # => ["Inside Out (2015).mkv", "Exorcist, The (1973).mkv", "Seven (1995).mkv", "Airplane (1980).mkv"]
+```
+
+### Mounting at non-root directory
+```ruby
+explorer.root_path
+#=> "/"
+
+movies = explorer.get('/Movies')
+explorer = UpnpContentExplorer::Explorer.new(service, root_id: movies.id)
+explorer.root_path
+#=> "/Movies"
 ```
 
 ## Extracting metadata

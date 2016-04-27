@@ -1,5 +1,7 @@
 module UpnpContentExplorer
   class Node
+    ROOT_ID = '0'
+
     def initialize(data)
       @data = data
     end
@@ -14,11 +16,15 @@ module UpnpContentExplorer
       super
     end
 
-    def load!(data)
+    def load!(data, mark_loaded = true)
       merged_data = @data.merge(data)
-      merged_data[:loaded?] = true
+      merged_data[:loaded?] ||= mark_loaded
 
       @data = merged_data
+    end
+
+    def parent_id
+      @data[:parentID] || nil
     end
 
     def children

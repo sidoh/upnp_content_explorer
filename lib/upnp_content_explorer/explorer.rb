@@ -1,3 +1,5 @@
+require 'pathname'
+
 require 'nokogiri'
 require 'nori'
 
@@ -8,21 +10,32 @@ module UpnpContentExplorer
   class PathNotFoundError < StandardError; end
 
   class Explorer
-    def initialize(service)
+    attr_accessor :root
+
+    DEFAULT_OPTIONS = {
+      root_id: 0
+    }
+
+    def initialize(service, options = {})
+      @options = DEFAULT_OPTIONS.merge(options)
       @service = service
-      @root = Node.new({title: 'Root', id: 0})
+      @root = load_root_node(@options[:root_id])
     end
 
-    def node_at(path)
+    def get(path)
       find_terminal_node(prepare_path(path))
     end
 
-    def children_of(path)
-      node_at(path).children
-    end
+    def root_path
+      path = []
+      current = @root
 
-    def items_of(path)
-      node_at(path).items
+      while !current.nil? && current.id != Node::ROOT_ID
+        path << current.title
+        current = load_root_node(current.parent_id)
+      end
+
+      '/' << path.reverse.join('/')
     end
 
     def scrape(path)
@@ -57,6 +70,24 @@ module UpnpContentExplorer
         find_terminal_node(path, child, next_traversed_path)
       end
 
+      def load_root_node(id)
+        node = Node.new(id: id)
+        response = @service.Browse(
+            ObjectID: id,
+            BrowseFlag: 'BrowseMetadata',
+            Filter: '*',
+            StartingIndex: '0',
+            RequestedCount: '0'
+        )
+
+        node_xml = Nokogiri::XML(response[:Result])
+        node_xml.remove_namespaces!
+        node_data = parse_nori_node(node_xml.xpath('//DIDL-Lite/container'))
+
+        node.load!(node_data, false)
+        node
+      end
+
       def get_node(node_id)
         response = @service.Browse(
             ObjectID: node_id,
@@ -66,7 +97,6 @@ module UpnpContentExplorer
             RequestedCount: '0'
         )
 
-        # Some UPnP servers (i.e., MediaTomb) screw up the namespacing
         node_data = response[:Result].gsub('xmlns=', 'xmlns:didl=')
         content   = Nokogiri::XML(node_data)
 

@@ -200,17 +200,17 @@ describe UpnpContentExplorer::Explorer do
       UpnpContentExplorer::Explorer.new(service)
     }
 
-    it 'should include basic metadata' do
-      item = explorer.get('/').items.first
+    let(:item) {
+      explorer.get('/').items.first
+    }
 
+    it 'should include basic metadata' do
       expect(item.title).to eq('a')
       expect(item.id).to eq('0$i0')
       expect(item.parentID).to eq('0')
     end
 
     it 'should include metadata in <res> tag' do
-      item = explorer.get('/').items.first
-
       expect(item.size).to eq('1234')
       expect(item.duration).to eq('0:29:00.000')
       expect(item.sampleFrequency).to eq('48000')
@@ -218,6 +218,17 @@ describe UpnpContentExplorer::Explorer do
       expect(item.resolution).to eq('1280x718')
       expect(item.protocolInfo).to eq('http-get:*:video/x-matroska:*')
       expect(item.url).to eq('http://192.168.0.1:8888/1.mkv')
+    end
+
+    it 'should expose metadata in a hash' do
+      expect(item.metadata).to be_an_instance_of(Hash)
+      expect(item.metadata[:size]).to eq('1234')
+      expect(item.metadata[:nrAudioChannels]).to eq('2')
+    end
+
+    it 'internal hash should be immutable' do
+      item.metadata[:size] = '2345'
+      expect(item.metadata[:size]).to eq('1234')
     end
   end
 end

@@ -12,14 +12,22 @@ module UpnpContentExplorer
         define_singleton_method(m) { extract_xpath("#{m}") }
       end
 
+      @metadata = {}
       %w{
         size duration bitrate sampleFrequency nrAudioChannels resolution
         protocolInfo
       }.each do |m|
-        define_singleton_method(m) { extract_xpath("res/@#{m}") }
+        v = extract_xpath("res/@#{m}")
+        @metadata[m.to_sym] = v
+        define_singleton_method(m) { v }
       end
 
-      define_singleton_method('url') { extract_xpath("res") }
+      @metadata[:url] = extract_xpath('res')
+      define_singleton_method('url') { @metadata[:url] }
+    end
+
+    def metadata
+      {}.merge(@metadata)
     end
 
     private

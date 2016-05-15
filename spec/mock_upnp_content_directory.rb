@@ -24,7 +24,7 @@ class MockUpnpContentDirectory
 
     def add_child(title, &block)
       child = Builder.new(title)
-      block.call(child)
+      block.call(child) if block
       @children << child
     end
 
@@ -48,7 +48,7 @@ class MockUpnpContentDirectory
 
       response = <<-DIDL
                      <?xml version="1.0" encoding="UTF-8"?>
-                     <DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/">
+                     <DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/">
                        #{children_xml.join("\n")}
                        #{items_xml.join("\n")}
                      </DIDL-Lite>

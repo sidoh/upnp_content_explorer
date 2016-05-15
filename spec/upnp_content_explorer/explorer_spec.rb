@@ -2,36 +2,12 @@ require 'spec_helper'
 
 describe UpnpContentExplorer::Explorer do
   context 'fetching a node' do
-    let(:rootNode) {
-      {
-          Result: <<-DIDL
-          <?xml version="1.0" encoding="UTF-8"?>
-                        <DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/">
-                           <container id="0" parentID="-1" childCount="1" restricted="false" searchable="true">
-                             <dc:title>Movies</dc:title>
-                           </container>
-                        </DIDL-Lite>
-          DIDL
-      }
-    }
-
-    let(:moviesNode) {
-      {
-          Result: <<-DIDL
-          <?xml version="1.0" encoding="UTF-8"?>
-                          <DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/">
-                             <item>
-                               <dc:title>Inside Out (2015)</dc:title>
-                             </item>
-                          </DIDL-Lite>
-          DIDL
-      }
-    }
-
     let(:service) {
-      service = double
-      allow(service).to receive(:Browse).and_return(rootNode, moviesNode)
-      service
+      MockUpnpContentDirectory.build do |root|
+        root.add_child('Movies') do |movies|
+          movies.add_item('Inside Out (2015)')
+        end
+      end
     }
 
     let(:explorer) {
@@ -40,31 +16,31 @@ describe UpnpContentExplorer::Explorer do
 
     it 'should throw an exception if a node doesn\'t exist' do
       expect {
-        explorer.node_at("/path/that/doesnot/exist")
+        explorer.get("/path/that/doesnot/exist")
       }.to raise_error(UpnpContentExplorer::PathNotFoundError)
     end
 
     it 'should successfully retrieve the root node' do
-      node = explorer.node_at("/")
+      node = explorer.get("/")
       expect(node).not_to be_nil
       expect(node.title).to eq('Root')
     end
 
     it 'should successfully retrieve the root children' do
-      children = explorer.children_of("/")
+      children = explorer.get("/").children
       expect(children).to be_an_instance_of Array
       expect(children.count).to eq(1)
       expect(children[0].title).to eq('Movies')
     end
 
     it 'should successfully retrieve the items of the root' do
-      items = explorer.items_of("/")
+      items = explorer.get("/").items
       expect(items).to be_an_instance_of Array
       expect(items.count).to eq(0)
     end
 
     it 'should retrieve a child node of the root successfully' do
-      node = explorer.node_at("/Movies")
+      node = explorer.get("/Movies")
       expect(node).not_to be_nil
       expect(node.title).to eq('Movies')
 
@@ -78,7 +54,7 @@ describe UpnpContentExplorer::Explorer do
     end
 
     it 'should retrieve a items of a child successfully' do
-      items = explorer.items_of("/Movies")
+      items = explorer.get("/Movies").items
       expect(items).not_to be_nil
 
       expect(items.count).to eq(1)

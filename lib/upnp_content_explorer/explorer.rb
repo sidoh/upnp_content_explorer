@@ -71,21 +71,7 @@ module UpnpContentExplorer
       end
 
       def load_root_node(id)
-        node = Node.new(id: id)
-        response = @service.Browse(
-            ObjectID: id,
-            BrowseFlag: 'BrowseMetadata',
-            Filter: '*',
-            StartingIndex: '0',
-            RequestedCount: '0'
-        )
-
-        node_xml = Nokogiri::XML(response[:Result])
-        node_xml.remove_namespaces!
-        node_data = parse_nori_node(node_xml.xpath('//DIDL-Lite/container'))
-
-        node.load!(node_data, false)
-        node
+        Node.new(id: id, title: 'Root')
       end
 
       def get_node(node_id)
@@ -97,8 +83,10 @@ module UpnpContentExplorer
             RequestedCount: '0'
         )
 
-        node_data = response[:Result].gsub('xmlns=', 'xmlns:didl=')
-        content   = Nokogiri::XML(node_data)
+        node_data = response[:Result]
+          .gsub('xmlns=', 'xmlns:didl=')
+        content = Nokogiri::XML(node_data)
+        content.remove_namespaces!
 
         children = content.xpath('/DIDL-Lite/container').map do |child|
           node_data = parse_nori_node(child)
@@ -106,8 +94,7 @@ module UpnpContentExplorer
         end
 
         items = content.xpath('/DIDL-Lite/item').map do |item|
-          item_data = parse_nori_node(item)
-          Item.new(item_data)
+          Item.new(item)
         end
 
         children = Hash[ children.map { |x| [x.title, x] } ]

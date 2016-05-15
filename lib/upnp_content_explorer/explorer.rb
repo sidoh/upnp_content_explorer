@@ -97,8 +97,10 @@ module UpnpContentExplorer
             RequestedCount: '0'
         )
 
-        node_data = response[:Result].gsub('xmlns=', 'xmlns:didl=')
-        content   = Nokogiri::XML(node_data)
+        node_data = response[:Result]
+          .gsub('xmlns=', 'xmlns:didl=')
+        content = Nokogiri::XML(node_data)
+        content.remove_namespaces!
 
         children = content.xpath('/DIDL-Lite/container').map do |child|
           node_data = parse_nori_node(child)
@@ -106,8 +108,7 @@ module UpnpContentExplorer
         end
 
         items = content.xpath('/DIDL-Lite/item').map do |item|
-          item_data = parse_nori_node(item)
-          Item.new(item_data)
+          Item.new(item)
         end
 
         children = Hash[ children.map { |x| [x.title, x] } ]

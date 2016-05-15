@@ -2,36 +2,12 @@ require 'spec_helper'
 
 describe UpnpContentExplorer::Explorer do
   context 'fetching a node' do
-    let(:rootNode) {
-      {
-          Result: <<-DIDL
-          <?xml version="1.0" encoding="UTF-8"?>
-                        <DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/">
-                           <container id="0" parentID="-1" childCount="1" restricted="false" searchable="true">
-                             <dc:title>Movies</dc:title>
-                           </container>
-                        </DIDL-Lite>
-          DIDL
-      }
-    }
-
-    let(:moviesNode) {
-      {
-          Result: <<-DIDL
-          <?xml version="1.0" encoding="UTF-8"?>
-                          <DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/">
-                             <item>
-                               <dc:title>Inside Out (2015)</dc:title>
-                             </item>
-                          </DIDL-Lite>
-          DIDL
-      }
-    }
-
     let(:service) {
-      service = double
-      allow(service).to receive(:Browse).and_return(rootNode, moviesNode)
-      service
+      MockUpnpContentDirectory.build do |root|
+        root.add_child('Movies') do |movies|
+          movies.add_item('Inside Out (2015)')
+        end
+      end
     }
 
     let(:explorer) {
@@ -40,31 +16,31 @@ describe UpnpContentExplorer::Explorer do
 
     it 'should throw an exception if a node doesn\'t exist' do
       expect {
-        explorer.node_at("/path/that/doesnot/exist")
+        explorer.get("/path/that/doesnot/exist")
       }.to raise_error(UpnpContentExplorer::PathNotFoundError)
     end
 
     it 'should successfully retrieve the root node' do
-      node = explorer.node_at("/")
+      node = explorer.get("/")
       expect(node).not_to be_nil
-      expect(node.title).to eq('Root')
+      expect(node.title).to eq('root')
     end
 
     it 'should successfully retrieve the root children' do
-      children = explorer.children_of("/")
+      children = explorer.get("/").children
       expect(children).to be_an_instance_of Array
       expect(children.count).to eq(1)
       expect(children[0].title).to eq('Movies')
     end
 
     it 'should successfully retrieve the items of the root' do
-      items = explorer.items_of("/")
+      items = explorer.get("/").items
       expect(items).to be_an_instance_of Array
       expect(items.count).to eq(0)
     end
 
     it 'should retrieve a child node of the root successfully' do
-      node = explorer.node_at("/Movies")
+      node = explorer.get("/Movies")
       expect(node).not_to be_nil
       expect(node.title).to eq('Movies')
 
@@ -78,7 +54,7 @@ describe UpnpContentExplorer::Explorer do
     end
 
     it 'should retrieve a items of a child successfully' do
-      items = explorer.items_of("/Movies")
+      items = explorer.get("/Movies").items
       expect(items).not_to be_nil
 
       expect(items.count).to eq(1)
@@ -160,6 +136,88 @@ describe UpnpContentExplorer::Explorer do
                                          'Annabelle (2014).avi',
                                          'As Above, So Below (2014).avi'
                                      )
+    end
+  end
+
+  context 'starting at a non-root node' do
+    let(:service) {
+      MockUpnpContentDirectory.build do |root|
+        root.add_child('a') do |a|
+          a.add_child('b') do |b|
+            b.add_item('c')
+          end
+        end
+      end
+    }
+
+    let(:explorer) {
+      UpnpContentExplorer::Explorer.new(service, root_id: '0$0')
+    }
+
+    it 'should work' do
+      expect {
+        explorer.get('/')
+      }.not_to raise_exception
+    end
+
+    it 'fetching relative root should resolve the correct node' do
+      n = explorer.get('/')
+      expect(n.title).to eq('a')
+      expect(n.children).to be_an_instance_of(Array)
+      expect(n.children.count).to eq(1)
+      expect(n.children.first.title).to eq('b')
+    end
+
+    it 'fetching node from relative root should resolve the correct node' do
+      n = explorer.get('/b')
+      expect(n.title).to eq('b')
+      expect(n.children).to be_an_instance_of(Array)
+      expect(n.children.count).to eq(0)
+      expect(n.items).to be_an_instance_of(Array)
+      expect(n.items.count).to eq(1)
+      expect(n.items.first.title).to eq('c')
+    end
+
+    it 'should return the correct absolute path' do
+      expect(explorer.root_path).to eq('/a')
+    end
+  end
+
+  context 'item metadata' do
+    let(:service) {
+      MockUpnpContentDirectory.build do |root|
+        root.add_item(
+          'a',
+          '<res size="1234" duration="0:29:00.000" bitrate="0" ' <<
+          'sampleFrequency="48000" nrAudioChannels="2" resolution="1280x718" ' <<
+          ' protocolInfo="http-get:*:video/x-matroska:*">' <<
+          'http://192.168.0.1:8888/1.mkv</res>'
+        )
+      end
+    }
+
+    let(:explorer) {
+      UpnpContentExplorer::Explorer.new(service)
+    }
+
+    it 'should include basic metadata' do
+      item = explorer.get('/').items.first
+
+      expect(item.title).to eq('a')
+      expect(item.id).to eq('0$i0')
+      expect(item.parentID).to eq('0')
+    end
+
+    it 'should include metadata in <res> tag' do
+      item = explorer.get('/').items.first
+
+      expect(item.size).to eq('1234')
+      expect(item.duration).to eq('0:29:00.000')
+      expect(item.sampleFrequency).to eq('48000')
+      expect(item.nrAudioChannels).to eq('2')
+      expect(item.resolution).to eq('1280x718')
+      expect(item.protocolInfo).to eq('http-get:*:video/x-matroska:*')
+      expect(item.url).to eq('http://192.168.0.1:8888/1.mkv')
     end
   end
 end

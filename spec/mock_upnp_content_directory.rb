@@ -64,7 +64,7 @@ class MockUpnpContentDirectory
     end
 
     def add_item(title, children_xml = "")
-      @items << title
+      @items << { title: title, children_xml: children_xml }
     end
 
     def build(id = '0')
@@ -78,7 +78,7 @@ class MockUpnpContentDirectory
 
       items_xml = @items.each_with_index.map do |item, i|
         item_id = "#{id}$i#{i}"
-        "<item id=\"#{item_id}\"><dc:title>#{item}</dc:title></item>"
+        "<item id=\"#{item_id}\"><dc:title>#{item[:title]}</dc:title>#{item[:children_xml]}</item>"
       end
 
       response = <<-DIDL

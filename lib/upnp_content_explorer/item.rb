@@ -11,16 +11,16 @@ module UpnpContentExplorer
       %w{title class date}.each do |m|
         define_singleton_method(m) { extract_xpath("#{m}") }
       end
-    end
 
-    def item_class
-      @data[:class]
-    end
+      %w{
+        size duration bitrate sampleFrequency nrAudioChannels resolution
+        protocolInfo
+      }.each do |m|
+        define_singleton_method(m) { extract_xpath("res/@#{m}") }
+      end
 
-    # def method_missing(key)
-    #   return @data[key] if @data.has_key?(key)
-    #   super
-    # end
+      define_singleton_method('url') { extract_xpath("res") }
+    end
 
     private
       def extract_xpath(xpath)

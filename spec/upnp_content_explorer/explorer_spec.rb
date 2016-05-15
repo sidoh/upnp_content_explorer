@@ -182,4 +182,42 @@ describe UpnpContentExplorer::Explorer do
       expect(explorer.root_path).to eq('/a')
     end
   end
+
+  context 'item metadata' do
+    let(:service) {
+      MockUpnpContentDirectory.build do |root|
+        root.add_item(
+          'a',
+          '<res size="1234" duration="0:29:00.000" bitrate="0" ' <<
+          'sampleFrequency="48000" nrAudioChannels="2" resolution="1280x718" ' <<
+          ' protocolInfo="http-get:*:video/x-matroska:*">' <<
+          'http://192.168.0.1:8888/1.mkv</res>'
+        )
+      end
+    }
+
+    let(:explorer) {
+      UpnpContentExplorer::Explorer.new(service)
+    }
+
+    it 'should include basic metadata' do
+      item = explorer.get('/').items.first
+
+      expect(item.title).to eq('a')
+      expect(item.id).to eq('0$i0')
+      expect(item.parentID).to eq('0')
+    end
+
+    it 'should include metadata in <res> tag' do
+      item = explorer.get('/').items.first
+
+      expect(item.size).to eq('1234')
+      expect(item.duration).to eq('0:29:00.000')
+      expect(item.sampleFrequency).to eq('48000')
+      expect(item.nrAudioChannels).to eq('2')
+      expect(item.resolution).to eq('1280x718')
+      expect(item.protocolInfo).to eq('http-get:*:video/x-matroska:*')
+      expect(item.url).to eq('http://192.168.0.1:8888/1.mkv')
+    end
+  end
 end

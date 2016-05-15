@@ -208,6 +208,7 @@ describe UpnpContentExplorer::Explorer do
       expect(item.title).to eq('a')
       expect(item.id).to eq('0$i0')
       expect(item.parentID).to eq('0')
+      expect(item.itemClass).to eq('object.item.videoItem')
     end
 
     it 'should include metadata in <res> tag' do

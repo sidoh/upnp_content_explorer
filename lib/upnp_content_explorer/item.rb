@@ -23,7 +23,11 @@ module UpnpContentExplorer
       end
 
       @metadata[:url] = extract_xpath('res')
-      define_singleton_method('url') { @metadata[:url] }
+      @metadata[:itemClass] = extract_xpath('class')
+
+      %w{url itemClass}.each do |m|
+        define_singleton_method(m) { @metadata[m.to_sym] }
+      end
     end
 
     def metadata

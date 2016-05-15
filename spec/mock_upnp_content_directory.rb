@@ -78,7 +78,13 @@ class MockUpnpContentDirectory
 
       items_xml = @items.each_with_index.map do |item, i|
         item_id = "#{id}$i#{i}"
-        "<item id=\"#{item_id}\" parentID=\"#{id}\"><dc:title>#{item[:title]}</dc:title>#{item[:children_xml]}</item>"
+        <<-XML
+        <item id="#{item_id}" parentID="#{id}">
+          <dc:title>#{item[:title]}</dc:title>
+          <upnp:class>object.item.videoItem</upnp:class>
+          #{item[:children_xml]}
+        </item>
+        XML
       end
 
       response = <<-DIDL

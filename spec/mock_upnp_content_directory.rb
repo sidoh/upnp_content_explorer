@@ -4,11 +4,46 @@ class MockUpnpContentDirectory
   end
 
   def Browse(params)
-    { Result: @responses_by_id[params[:ObjectID].to_s] }
+    browse_flag = params[:BrowseFlag] || 'BrowseDirectChildren'
+    id = params[:ObjectID].to_s
+
+    if browse_flag == 'BrowseDirectChildren'
+      { Result: @responses_by_id[id] }
+    elsif browse_flag == 'BrowseMetadata'
+      if id == '0'
+        {
+          Result: <<-XML
+            <?xml version="1.0" encoding="UTF-8"?>
+            <DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/">
+              <container id="0" parentID="-1">
+                <dc:title>root</dc:title>
+              </container>
+            </DIDL-Lite>
+          XML
+        }
+      else
+        node = @responses_by_id
+          .values
+          .map { |x| Nokogiri::XML(x).xpath("//*[@id = '#{id}']") }
+          .reject(&:empty?)
+          .first
+
+        {
+          Result: <<-XML
+          <?xml version="1.0" encoding="UTF-8"?>
+          <DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/">
+            #{node.to_xml}
+          </DIDL-Lite>
+          XML
+        }
+      end
+    else
+      raise "Invalid BrowseFlag: #{browse_flag}"
+    end
   end
 
   def self.build(&block)
-    builder = Builder.new('Root')
+    builder = Builder.new('root')
     block.call(builder)
     MockUpnpContentDirectory.new(builder.build)
   end
@@ -28,7 +63,7 @@ class MockUpnpContentDirectory
       @children << child
     end
 
-    def add_item(title)
+    def add_item(title, children_xml = "")
       @items << title
     end
 

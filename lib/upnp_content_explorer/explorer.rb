@@ -71,7 +71,21 @@ module UpnpContentExplorer
       end
 
       def load_root_node(id)
-        Node.new(id: id, title: 'Root')
+        node = Node.new(id: id)
+        response = @service.Browse(
+            ObjectID: id,
+            BrowseFlag: 'BrowseMetadata',
+            Filter: '*',
+            StartingIndex: '0',
+            RequestedCount: '0'
+        )
+
+        node_xml = Nokogiri::XML(response[:Result])
+        node_xml.remove_namespaces!
+        node_data = parse_nori_node(node_xml.xpath('//DIDL-Lite/container'))
+
+        node.load!(node_data, false)
+        node
       end
 
       def get_node(node_id)

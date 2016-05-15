@@ -23,7 +23,7 @@ describe UpnpContentExplorer::Explorer do
     it 'should successfully retrieve the root node' do
       node = explorer.get("/")
       expect(node).not_to be_nil
-      expect(node.title).to eq('Root')
+      expect(node.title).to eq('root')
     end
 
     it 'should successfully retrieve the root children' do
@@ -136,6 +136,50 @@ describe UpnpContentExplorer::Explorer do
                                          'Annabelle (2014).avi',
                                          'As Above, So Below (2014).avi'
                                      )
+    end
+  end
+
+  context 'starting at a non-root node' do
+    let(:service) {
+      MockUpnpContentDirectory.build do |root|
+        root.add_child('a') do |a|
+          a.add_child('b') do |b|
+            b.add_item('c')
+          end
+        end
+      end
+    }
+
+    let(:explorer) {
+      UpnpContentExplorer::Explorer.new(service, root_id: '0$0')
+    }
+
+    it 'should work' do
+      expect {
+        explorer.get('/')
+      }.not_to raise_exception
+    end
+
+    it 'fetching relative root should resolve the correct node' do
+      n = explorer.get('/')
+      expect(n.title).to eq('a')
+      expect(n.children).to be_an_instance_of(Array)
+      expect(n.children.count).to eq(1)
+      expect(n.children.first.title).to eq('b')
+    end
+
+    it 'fetching node from relative root should resolve the correct node' do
+      n = explorer.get('/b')
+      expect(n.title).to eq('b')
+      expect(n.children).to be_an_instance_of(Array)
+      expect(n.children.count).to eq(0)
+      expect(n.items).to be_an_instance_of(Array)
+      expect(n.items.count).to eq(1)
+      expect(n.items.first.title).to eq('c')
+    end
+
+    it 'should return the correct absolute path' do
+      expect(explorer.root_path).to eq('/a')
     end
   end
 end
